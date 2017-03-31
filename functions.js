@@ -27,12 +27,16 @@ function ror32(val, rotateBy) {
 	return newVal | (copy << (32 - rotateBy));
 }
 
-function normaliseReg(cpu, reg) {
-	if (reg == Consts.special_reg.PC_REGISTER) {
-		return cpu.getPC().val() + 8;
-	} else {
-		return cpu.reg(reg).val();
-	}
+function getCarry(result) {
+	return result > MAX_UINT_32 ? 1 : 0;
+}
+
+function getBorrow(result) {
+	return result < -MAX_UINT_32 ? 1 : 0;
+}
+
+function getOverflow(result) {
+	return result < -MAX_INT_32 || result > MAX_INT_32 ? 1 : 0;
 }
 
 function condPassed(cond, flags) {
@@ -188,13 +192,20 @@ function getAddress(cpu, o, condPass) {
 	return addr;
 }
 
-function getAddressMisc(cpu, o) {
+function getAddressMisc(cpu, o, condPass) {
+	let addr = cpu.reg(o.Rn).val();
+	let returnAddr = addr;
+
 	if (o.I) { //immediate
 		let formatter = new InstructionPattern("immedH(4)1111immedL(4)");
 		let result = formatter.matches(o.addr_mode);
 
 		let offset_8 = (result.immedH << 4) | result.immedL;
-
+		if (o.U) {
+			addr = addr + offset_8;
+		} else {
+			addr = addr - offset_8;
+		}
 	} else {
 
 	}
@@ -334,14 +345,6 @@ function getShifterOperand(cpu, immediate, shifterCode) {
 			return null;
 		}
 	}
-}
-
-function getCarry(result) {
-	return result < -MAX_UINT_32 || result > MAX_UINT_32 ? 1 : 0;
-}
-
-function getOverflow(result) {
-	return result < -MAX_INT_32 || result > MAX_INT_32 ? 1 : 0;
 }
 
 module.exports = class Functions {
@@ -495,7 +498,9 @@ module.exports = class Functions {
 		//I don't think this is implemented... maybe in some games
 	}
 
-
+	static MISC_STUFF() {
+		
+	}
 
 	static LDR(cpu, o) {
 		let cpsr = cpu.getCPSR();
