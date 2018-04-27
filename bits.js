@@ -13,11 +13,7 @@ class BitUtils {
 	}
 
 	static createMask(len) {
-		var result = 0;
-		for (var i = 0; i < len; i++) {
-			result |= 1 << i;
-		}
-		return result;
+		return (1 << len) - 1;
 	}
 
 	static setBit(index, val, data) {

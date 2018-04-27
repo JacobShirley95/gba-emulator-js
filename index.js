@@ -12,6 +12,13 @@ function createInstruction(name, func, pattern) {
 	instrs.push({name, func, pattern: new InstructionPattern(pattern)});
 }
 
+function getInstruction(name) {
+	for (let i of instrs)
+		if (i.name === name)
+			return i;
+	return null;
+}
+
 function loadInstructions() {
 	//Add with carry
 
@@ -25,10 +32,32 @@ function loadInstructions() {
 	createInstruction("BX", Functions.BX, "cond(4)[00010010][1111][1111][1111][1111][0001]Rm(4)"); //done
 
 	createInstruction("CDP", Functions.CDP, "cond(4)[1110]opcode_1(4)CRn(4)CRd(4)cp_num(4)opcode_2(3)[0]CRm(4)");
+	createInstruction("CMN", Functions.CMN, "cond(4)[00I10111]Rn(4)[0000]shifter_operand(12)");
+	createInstruction("CMP", Functions.CMP, "cond(4)[00I10101]Rn(4)[0000]shifter_operand(12)");
+
+	createInstruction("EOR", Functions.EOR, "cond(4)[00I0001S]Rn(4)Rd(4)shifter_operand(12)");
 
 	createInstruction("LDC", Functions.LDC, "cond(4)[110PUNW1]Rn(4)CRd(4)cp_num(4)_8_bit_word_offset(8)");
-
+	createInstruction("LDM", Functions.LDM, "cond(4)[100PU0W1]Rn(4)register_list(16)");
+	createInstruction("LDM_2", Functions.LDM_2, "cond(4)[100PU101]Rn(4)[0]register_list(15)");
+	createInstruction("LDM_3", Functions.LDM_3, "cond(4)[100PU1W1]Rn(4)[1]register_list(15)");
 	createInstruction("LDR", Functions.LDR, "cond(4)[01IPU0W1]Rn(4)Rd(4)addr_mode(12)");
+	createInstruction("LDRB", Functions.LDRB, "cond(4)[01IPU1W1]Rn(4)Rd(4)addr_mode(12)");
+	createInstruction("LDRBT", Functions.LDRBT, "cond(4)[01I0U111]Rn(4)Rd(4)addr_mode(12)");
+	createInstruction("LDRH", Functions.LDRH, "cond(4)[000PUIW1]Rn(4)Rd(4)addr_mode_1(4)[1011]addr_mode_2(4)");
+	createInstruction("LDRSB", Functions.LDRSB, "cond(4)[000PUIW1]Rn(4)Rd(4)addr_mode_1(4)[1101]addr_mode_2(4)");
+	createInstruction("LDRSH", Functions.LDRSH, "cond(4)[000PUIW1]Rn(4)Rd(4)addr_mode_1(4)[1111]addr_mode_2(4)");
+	createInstruction("LDRT", Functions.LDRT, "cond(4)[00I0U011]Rn(4)Rd(4)addr_mode(12)");
+
+	createInstruction("MCR", Functions.MCR, "cond(4)[1110]opcode_1(3)[0]CRn(4)Rd(4)cp_num(4)opcode_2(3)[1]CRm(4)");
+	createInstruction("MLA", Functions.MLA, "cond(4)[0000001S]Rd(4)Rn(4)Rs(4)[1001]Rm(4)");
+	createInstruction("MOV", Functions.MOV, "cond(4)[00I1101S][0000]Rd(4)shifter_operand(12)");
+	createInstruction("MRC", Functions.MRC, "cond(4)[1110]opcode_1(3)[1]CRn(4)Rd(4)cp_num(4)opcode_2(3)[1]CRm(4)");
+	createInstruction("MRS", Functions.MRS, "cond(4)[00010R00][1111]Rd(4)[000000000000]");
+	createInstruction("MSR", Functions.MSR, "cond(4)[000I0R10]field_mask(4)[1111]ops(12)");
+	createInstruction("MUL", Functions.MUL, "cond(4)[0000000S]Rd(4)[0000]Rs(4)[1001]Rm(4)");
+
+
 	//let fields = instrs[0].pattern.matches(BitUtils.binToDen(instr));
 	//instrs[0].func(cpu, fields);
 }
@@ -155,6 +184,7 @@ class ArmCPU {
 		this.instrAddr = 0;
 		this._registers = [];
 		this.tMode = false;
+		this.memory = [];
 
 		//R0 - R7 unbanked
 		for (var i = 0; i < 8; i++) {
@@ -246,15 +276,16 @@ var romStream = fs.createReadStream("rom.gba");
 var data = null;
 var c = 0;
 
+let instr = getInstruction("MRC");
+
 romStream.on('readable', () => {
 	while ((data = romStream.read(4)) != null) {
 		c++;
 		let i = data.readUInt32LE();
-		let instr = instrs[6];
 		var match = instr.pattern.matches(i);
 		if (match != null) {
-			console.log(match);
-			//instr.func(cpu, match);
+			console.log("MRC on p"+match.cp_num);
+			//instr.func(cpu, match, i);
 			//break;
 			//console.log(match);
 		}

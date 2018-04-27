@@ -117,7 +117,6 @@ function getCFlag(cpu) {
 
 function getAddress(cpu, o, condPass) {
 	let addr = cpu.reg(o.Rn).val();
-	let returnAddr = addr;
 
 	if (!o.P && !o.W && !condPass) {
 		return addr;
@@ -184,31 +183,60 @@ function getAddress(cpu, o, condPass) {
 		}
 	}
 
-	if (!o.P && !o.W && condPass)
+	if (!o.P && !o.W && condPass) {
+		let orig = cpu.reg(o.Rn);
 		cpu.reg(o.Rn).val(addr);
-	else if (o.P && o.W && condPass)
+		return orig;
+	} else if (o.P && o.W && condPass)
 		cpu.reg(o.Rn).val(addr);
 
 	return addr;
 }
 
-function getAddressMisc(cpu, o, condPass) {
-	let addr = cpu.reg(o.Rn).val();
-	let returnAddr = addr;
+function getAddressMisc(cpu, o, addr_mode, condPass) {
+	let address = cpu.reg(o.Rn).val();
+
+	if (!o.P && !o.W && !condPass) {
+		return addr;
+	}
 
 	if (o.I) { //immediate
 		let formatter = new InstructionPattern("immedH(4)1111immedL(4)");
-		let result = formatter.matches(o.addr_mode);
+		let result = formatter.matches(addr_mode);
 
 		let offset_8 = (result.immedH << 4) | result.immedL;
 		if (o.U) {
-			addr = addr + offset_8;
+			address = address + offset_8;
 		} else {
-			addr = addr - offset_8;
+			address = address - offset_8;
 		}
 	} else {
+		let formatter = new InstructionPattern("1111iRm(4)");
+		let result = formatter.matches(addr_mode);
 
+		let Rm = cpu.reg(result.Rm).val();
+		if (o.U) {
+			address = address + Rm;
+		} else {
+			address = address - Rm;
+		}
 	}
+
+	if (!o.P && !o.W && condPass) {
+		let orig = cpu.reg(o.Rn);
+		cpu.reg(o.Rn).val(address);
+		return orig;
+	} else if (o.P && o.W && condPass)
+		cpu.reg(o.Rn).val(address);
+
+	return address;
+}
+
+function getMulAddresses(cpu, o, addr_mode, condPass) {
+	let start_address = cpu.reg(o.Rn).val();
+	let end_address = start_address;
+
+	return address;
 }
 
 function getShifterOperand(cpu, immediate, shifterCode) {
@@ -498,8 +526,13 @@ module.exports = class Functions {
 		//I don't think this is implemented... maybe in some games
 	}
 
-	static MISC_STUFF() {
-		
+	static MISC_STUFF(cpu, o, instr) {
+		let cpsr = cpu.getCPSR();
+		let passed = condPassed(o.cond, cpsr.val());
+		if (passed) {
+			o.addr_mode = instr & 0xFFF;
+
+		}
 	}
 
 	static LDR(cpu, o) {
